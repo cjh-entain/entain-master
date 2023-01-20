@@ -9,6 +9,7 @@ import (
 	"git.neds.sh/matty/entain/api/proto/racing"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
@@ -34,7 +35,7 @@ func run() error {
 		ctx,
 		mux,
 		*grpcEndpoint,
-		[]grpc.DialOption{grpc.WithInsecure()},
+		[]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
 	); err != nil {
 		return err
 	}

@@ -2,13 +2,13 @@ package db
 
 import (
 	"database/sql"
-	"github.com/golang/protobuf/ptypes"
-	_ "github.com/mattn/go-sqlite3"
 	"strings"
 	"sync"
 	"time"
 
 	"git.neds.sh/matty/entain/racing/proto/racing"
+	_ "github.com/mattn/go-sqlite3"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // RacesRepo provides repository access to races.
@@ -103,10 +103,7 @@ func (m *racesRepo) scanRaces(
 			return nil, err
 		}
 
-		ts, err := ptypes.TimestampProto(advertisedStart)
-		if err != nil {
-			return nil, err
-		}
+		ts := timestamppb.New(advertisedStart)
 
 		race.AdvertisedStartTime = ts
 
