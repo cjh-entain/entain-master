@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,7 +19,7 @@ type RacesRepo interface {
 	Init() error
 
 	// List will return a list of races.
-	List(filter *racing.ListRacesRequestFilter) ([]*racing.Race, error)
+	List(filter *racing.ListRacesRequestFilter, orderBy *racing.ListRacesRequestOrderBy) ([]*racing.Race, error)
 }
 
 type racesRepo struct {
@@ -43,7 +44,7 @@ func (r *racesRepo) Init() error {
 	return err
 }
 
-func (r *racesRepo) List(filter *racing.ListRacesRequestFilter) ([]*racing.Race, error) {
+func (r *racesRepo) List(filter *racing.ListRacesRequestFilter, orderBy *racing.ListRacesRequestOrderBy) ([]*racing.Race, error) {
 	var (
 		err   error
 		query string
@@ -54,12 +55,62 @@ func (r *racesRepo) List(filter *racing.ListRacesRequestFilter) ([]*racing.Race,
 
 	query, args = r.applyFilter(query, filter)
 
+	query = r.applyOrderBy(query, orderBy)
+
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 
 	return r.scanRaces(rows)
+}
+
+// Allows for a ListRaces RPC to be ordered by a user-provided field, in a user-provided direction. Validates the user
+// provided field against columns returned by the DB.
+func (r *racesRepo) applyOrderBy(query string, orderBy *racing.ListRacesRequestOrderBy) string {
+	// Return immediately if not in request
+	if orderBy == nil {
+		return query
+	}
+
+	// Determine a list of columns upon which you can order by; the validity of which should be determined by the DB
+	validColumns := make(map[string]bool)
+	columnQuery := getRaceQueries()[racesColumnsList]
+	rows, err := r.db.Query(columnQuery)
+	if err != nil {
+		log.Print("failed to get column names for ListRaces, continuing without")
+		return query
+	}
+
+	// Iterate over the rows returned from the DB and add them to a list
+	for rows.Next() {
+		var columnName string
+		err := rows.Scan(&columnName)
+		if err != nil {
+			log.Print("failed to parse column names for ListRaces, continuing without")
+			return query
+		}
+		validColumns[columnName] = true
+	}
+
+	// Append user selected field if it's valid (i.e. was one of the columns returned earlier)
+	if _, ok := validColumns[orderBy.GetField()]; !ok {
+		return query
+	}
+	query += " ORDER BY " + orderBy.GetField()
+
+	// Append user selected direction if it's valid and provided
+	if orderBy.Direction != nil {
+		direction := strings.ToUpper(orderBy.GetDirection())
+		switch direction {
+		case "ASC":
+			query += " ASC"
+		case "DESC":
+			query += " DESC"
+		}
+	}
+
+	return query
 }
 
 func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFilter) (string, []interface{}) {
