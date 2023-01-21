@@ -69,12 +69,15 @@ curl -X "POST" "http://localhost:8000/v1/list-races" \
 ```
 
 ### API Usage Guide
-Continuing from the above provided examples, a number additional, configurable components are now available for use. These include:
+Continuing from the above provided examples, a number additional and/or configurable components are now available for use. These include:
+
+#### Races Endpoint
+- Fetching a singular race by ID
 - Filtering races by their visibility status
 - Ordering races by a user-provided field and direction (ASC/DESC)
 - A combination of the above
 
-#### Examples
+#### Races Endpoint Examples
 1. List all races that are visible _only_
 ```bash
 curl -X "POST" "http://localhost:8000/v1/list-races" \
@@ -87,6 +90,27 @@ curl -X "POST" "http://localhost:8000/v1/list-races" \
 curl -X "POST" "http://localhost:8000/v1/list-races" \
      -H 'Content-Type: application/json' \
      -d $'{ "filter": {"visible": true}, "order": {"field": "advertised_start_time", "direction": "ASC" } }'
+```
+
+#### Sports Endpoint
+- Fetching all sports events
+- Filtering sports events by the home team, away team, venue location, or visibility status
+- Ordering sports events by a user-provided field and direction (ASC/DESC)
+- A combination of the above
+
+#### Sports Endpoint Examples
+1. List all sports events where the home team is the Newcastle Knights
+```bash
+curl -X "POST" "http://localhost:8000/v1/list-events" \
+     -H 'Content-Type: application/json' \
+     -d $'{ "filter": {"home_team": "Newcastle Knights"} }'
+```
+
+2. List all sports events that are visible, by their starting times in descending order
+```bash
+curl -X "POST" "http://localhost:8000/v1/list-events" \
+     -H 'Content-Type: application/json' \
+     -d $'{ "filter": {"visible": true}, "order": {"field": "advertised_start_time", "direction": "DESC" } }'
 ```
 
 ### Changes/Updates Required
