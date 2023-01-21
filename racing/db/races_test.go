@@ -45,23 +45,30 @@ func Test_RacesRepo_applyFilter(t *testing.T) {
 		},
 		"Filter on Visible = true": {
 			Filter: &racing.ListRacesRequestFilter{
-				Visible: boolPtr(true),
+				Visible: pointerTo(true),
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE visible = true",
 		},
 		"Filter on Visible = false": {
 			Filter: &racing.ListRacesRequestFilter{
-				Visible: boolPtr(false),
+				Visible: pointerTo(false),
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE visible = false",
 		},
 		"Filter on both MeetingId's and Visible": {
 			Filter: &racing.ListRacesRequestFilter{
 				MeetingIds: []int64{1, 2},
-				Visible:    boolPtr(true),
+				Visible:    pointerTo(true),
 			},
 			ExpectedArgs:  []interface{}{int64(1), int64(2)},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE meeting_id IN (?,?) AND visible = true",
+		},
+		"Filter on a Race ID": {
+			Filter: &racing.ListRacesRequestFilter{
+				Id: pointerTo(int64(5)),
+			},
+			ExpectedArgs:  []interface{}{int64(5)},
+			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE id = ?",
 		},
 	}
 
@@ -115,7 +122,7 @@ func Test_RacesRepo_applyOrder(t *testing.T) {
 		"Order provided for invalid field with direction resulting in no changes": {
 			Order: &racing.ListRacesRequestOrder{
 				Field:     "unknown",
-				Direction: strPtr("ASC"),
+				Direction: pointerTo("ASC"),
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races",
 		},
@@ -129,21 +136,21 @@ func Test_RacesRepo_applyOrder(t *testing.T) {
 		"Order provided for valid field, ASC direction": {
 			Order: &racing.ListRacesRequestOrder{
 				Field:     "meeting_id",
-				Direction: strPtr("ASC"),
+				Direction: pointerTo("ASC"),
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id ASC",
 		},
 		"Order provided for valid field, DESC direction": {
 			Order: &racing.ListRacesRequestOrder{
 				Field:     "meeting_id",
-				Direction: strPtr("DESC"),
+				Direction: pointerTo("DESC"),
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id DESC",
 		},
 		"Order provided for valid field, invalid direction": {
 			Order: &racing.ListRacesRequestOrder{
 				Field:     "meeting_id",
-				Direction: strPtr("INCORRECT"),
+				Direction: pointerTo("INCORRECT"),
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id",
 		},
@@ -274,16 +281,6 @@ func Test_addStatus(t *testing.T) {
 	}
 }
 
-// Go doesn't allow for pointers to literals; this is a workaround for the purpose of testing.
-func boolPtr(b bool) *bool {
-	return &b
-}
-
-// Go doesn't allow for pointers to literals; this is a workaround for the purpose of testing.
-func strPtr(s string) *string {
-	return &s
-}
-
 // Instantiates an in-memory DB with testTableDefinition for unit tests
 func memoryDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", ":memory:")
@@ -296,4 +293,9 @@ func memoryDB(t *testing.T) *sql.DB {
 	_, _ = statement.Exec()
 
 	return db
+}
+
+// Go doesn't allow for pointers to literals; this is a generic function used as a workaround
+func pointerTo[T any](p T) *T {
+	return &p
 }
