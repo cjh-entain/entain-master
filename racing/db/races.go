@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -77,6 +78,10 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 		for _, meetingID := range filter.MeetingIds {
 			args = append(args, meetingID)
 		}
+	}
+
+	if filter.Visible != nil {
+		clauses = append(clauses, "visible = "+strconv.FormatBool(filter.GetVisible()))
 	}
 
 	if len(clauses) != 0 {
