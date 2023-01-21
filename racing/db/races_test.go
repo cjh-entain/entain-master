@@ -90,56 +90,56 @@ func Test_RacesRepo_applyFilter(t *testing.T) {
 	}
 }
 
-type applyOrderByConfig struct {
-	OrderBy       *racing.ListRacesRequestOrderBy
+type applyOrderConfig struct {
+	Order         *racing.ListRacesRequestOrder
 	ExpectedQuery string
 }
 
-// Validates .applyOrderBy by comparing query strings
-func Test_RacesRepo_applyOrderBy(t *testing.T) {
+// Validates .applyOrder by comparing query strings
+func Test_RacesRepo_applyOrder(t *testing.T) {
 
-	tests := map[string]applyOrderByConfig{
-		"Base case - No orderBy provided": {
-			OrderBy:       nil,
+	tests := map[string]applyOrderConfig{
+		"Base case - No order provided": {
+			Order:         nil,
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races",
 		},
-		"OrderBy provided for invalid field, no direction": {
-			OrderBy: &racing.ListRacesRequestOrderBy{
+		"Order provided for invalid field, no direction": {
+			Order: &racing.ListRacesRequestOrder{
 				Field:     "unknown",
 				Direction: nil,
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races",
 		},
-		"OrderBy provided for invalid field with direction resulting in no changes": {
-			OrderBy: &racing.ListRacesRequestOrderBy{
+		"Order provided for invalid field with direction resulting in no changes": {
+			Order: &racing.ListRacesRequestOrder{
 				Field:     "unknown",
 				Direction: strPtr("ASC"),
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races",
 		},
-		"OrderBy provided for valid field, no direction": {
-			OrderBy: &racing.ListRacesRequestOrderBy{
+		"Order provided for valid field, no direction": {
+			Order: &racing.ListRacesRequestOrder{
 				Field:     "meeting_id",
 				Direction: nil,
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id",
 		},
-		"OrderBy provided for valid field, ASC direction": {
-			OrderBy: &racing.ListRacesRequestOrderBy{
+		"Order provided for valid field, ASC direction": {
+			Order: &racing.ListRacesRequestOrder{
 				Field:     "meeting_id",
 				Direction: strPtr("ASC"),
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id ASC",
 		},
-		"OrderBy provided for valid field, DESC direction": {
-			OrderBy: &racing.ListRacesRequestOrderBy{
+		"Order provided for valid field, DESC direction": {
+			Order: &racing.ListRacesRequestOrder{
 				Field:     "meeting_id",
 				Direction: strPtr("DESC"),
 			},
 			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id DESC",
 		},
-		"OrderBy provided for valid field, invalid direction": {
-			OrderBy: &racing.ListRacesRequestOrderBy{
+		"Order provided for valid field, invalid direction": {
+			Order: &racing.ListRacesRequestOrder{
 				Field:     "meeting_id",
 				Direction: strPtr("INCORRECT"),
 			},
@@ -161,10 +161,10 @@ func Test_RacesRepo_applyOrderBy(t *testing.T) {
 	for name, cfg := range tests {
 		t.Run(
 			name,
-			func(cfg applyOrderByConfig) func(t *testing.T) {
+			func(cfg applyOrderConfig) func(t *testing.T) {
 				return func(*testing.T) {
 					query := getRaceQueries()[racesList]
-					gotQueryTmp := racesRepo.applyOrderBy(query, cfg.OrderBy)
+					gotQueryTmp := racesRepo.applyOrder(query, cfg.Order)
 					gotQuery := replacer.Replace(gotQueryTmp)
 
 					assert.Equal(t, cfg.ExpectedQuery, gotQuery)

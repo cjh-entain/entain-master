@@ -86,7 +86,7 @@ curl -X "POST" "http://localhost:8000/v1/list-races" \
 ```bash
 curl -X "POST" "http://localhost:8000/v1/list-races" \
      -H 'Content-Type: application/json' \
-     -d $'{ "filter": {"visible": true}, "orderBy": {"field": "advertised_start_time", "direction": "ASC" } }'
+     -d $'{ "filter": {"visible": true}, "order": {"field": "advertised_start_time", "direction": "ASC" } }'
 ```
 
 ### Changes/Updates Required

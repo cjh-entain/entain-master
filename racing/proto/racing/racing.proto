@@ -14,7 +14,7 @@ service Racing {
 
 message ListRacesRequest {
   ListRacesRequestFilter filter = 1;
-  ListRacesRequestOrderBy orderBy = 2;
+  ListRacesRequestOrder order = 2;
 }
 
 // Response to ListRaces call.
@@ -29,7 +29,7 @@ message ListRacesRequestFilter {
 }
 
 // Allows for a ListRaces query to be ordered by a user-provided column and direction
-message ListRacesRequestOrderBy {
+message ListRacesRequestOrder {
   string field = 1;
   optional string direction = 2;
 }

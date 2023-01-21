@@ -19,7 +19,7 @@ type RacesRepo interface {
 	Init() error
 
 	// List will return a list of races.
-	List(filter *racing.ListRacesRequestFilter, orderBy *racing.ListRacesRequestOrderBy) ([]*racing.Race, error)
+	List(filter *racing.ListRacesRequestFilter, order *racing.ListRacesRequestOrder) ([]*racing.Race, error)
 }
 
 type racesRepo struct {
@@ -44,7 +44,7 @@ func (r *racesRepo) Init() error {
 	return err
 }
 
-func (r *racesRepo) List(filter *racing.ListRacesRequestFilter, orderBy *racing.ListRacesRequestOrderBy) ([]*racing.Race, error) {
+func (r *racesRepo) List(filter *racing.ListRacesRequestFilter, order *racing.ListRacesRequestOrder) ([]*racing.Race, error) {
 	var (
 		err   error
 		query string
@@ -55,7 +55,7 @@ func (r *racesRepo) List(filter *racing.ListRacesRequestFilter, orderBy *racing.
 
 	query, args = r.applyFilter(query, filter)
 
-	query = r.applyOrderBy(query, orderBy)
+	query = r.applyOrder(query, order)
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
@@ -67,9 +67,9 @@ func (r *racesRepo) List(filter *racing.ListRacesRequestFilter, orderBy *racing.
 
 // Allows for a ListRaces RPC to be ordered by a user-provided field, in a user-provided direction. Validates the user
 // provided field against columns returned by the DB.
-func (r *racesRepo) applyOrderBy(query string, orderBy *racing.ListRacesRequestOrderBy) string {
+func (r *racesRepo) applyOrder(query string, order *racing.ListRacesRequestOrder) string {
 	// Return immediately if not in request
-	if orderBy == nil {
+	if order == nil {
 		return query
 	}
 
@@ -94,14 +94,14 @@ func (r *racesRepo) applyOrderBy(query string, orderBy *racing.ListRacesRequestO
 	}
 
 	// Append user selected field if it's valid (i.e. was one of the columns returned earlier)
-	if _, ok := validColumns[orderBy.GetField()]; !ok {
+	if _, ok := validColumns[order.GetField()]; !ok {
 		return query
 	}
-	query += " ORDER BY " + orderBy.GetField()
+	query += " ORDER BY " + order.GetField()
 
 	// Append user selected direction if it's valid and provided
-	if orderBy.Direction != nil {
-		direction := strings.ToUpper(orderBy.GetDirection())
+	if order.Direction != nil {
+		direction := strings.ToUpper(order.GetDirection())
 		switch direction {
 		case "ASC":
 			query += " ASC"
