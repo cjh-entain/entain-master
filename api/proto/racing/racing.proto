@@ -53,4 +53,6 @@ message Race {
   bool visible = 5;
   // AdvertisedStartTime is the time the race is advertised to run.
   google.protobuf.Timestamp advertised_start_time = 6;
+  // Status represents whether AdvertisedStartTime is in the past or future
+  string status = 7;
 }

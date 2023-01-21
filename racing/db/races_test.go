@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"strings"
 	"testing"
+	"time"
 
 	"git.neds.sh/matty/entain/racing/proto/racing"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -168,6 +170,105 @@ func Test_RacesRepo_applyOrder(t *testing.T) {
 					gotQuery := replacer.Replace(gotQueryTmp)
 
 					assert.Equal(t, cfg.ExpectedQuery, gotQuery)
+				}
+			}(cfg))
+	}
+}
+
+type addStatusConfig struct {
+	Input         []*racing.Race
+	ExpectedRaces []*racing.Race
+}
+
+// Validates the calculation of the status field based upon a races timestamp
+func Test_addStatus(t *testing.T) {
+
+	var (
+		futureTime = timestamppb.New(time.Now().Add(time.Hour * 24))
+		pastTime   = timestamppb.New(time.Now().Add(-time.Hour * 24))
+	)
+
+	tests := map[string]addStatusConfig{
+		"No input": {
+			Input:         nil,
+			ExpectedRaces: nil,
+		},
+		"Single race with future time": {
+			Input: []*racing.Race{
+				{AdvertisedStartTime: futureTime},
+			},
+			ExpectedRaces: []*racing.Race{
+				{AdvertisedStartTime: futureTime, Status: "OPEN"},
+			},
+		},
+		"Single race with past time": {
+			Input: []*racing.Race{
+				{AdvertisedStartTime: pastTime},
+			},
+			ExpectedRaces: []*racing.Race{
+				{AdvertisedStartTime: pastTime, Status: "CLOSED"},
+			},
+		},
+		"Multiple races with future times": {
+			Input: []*racing.Race{
+				{AdvertisedStartTime: futureTime},
+				{AdvertisedStartTime: futureTime},
+			},
+			ExpectedRaces: []*racing.Race{
+				{AdvertisedStartTime: futureTime, Status: "OPEN"},
+				{AdvertisedStartTime: futureTime, Status: "OPEN"},
+			},
+		},
+		"Multiple races with past times": {
+			Input: []*racing.Race{
+				{AdvertisedStartTime: pastTime},
+				{AdvertisedStartTime: pastTime},
+			},
+			ExpectedRaces: []*racing.Race{
+				{AdvertisedStartTime: pastTime, Status: "CLOSED"},
+				{AdvertisedStartTime: pastTime, Status: "CLOSED"},
+			},
+		},
+		"Multiple races with differing times": {
+			Input: []*racing.Race{
+				{AdvertisedStartTime: futureTime},
+				{AdvertisedStartTime: pastTime},
+			},
+			ExpectedRaces: []*racing.Race{
+				{AdvertisedStartTime: futureTime, Status: "OPEN"},
+				{AdvertisedStartTime: pastTime, Status: "CLOSED"},
+			},
+		},
+		"Race with no AdvertisedStartTime": {
+			Input: []*racing.Race{
+				{AdvertisedStartTime: nil},
+			},
+			ExpectedRaces: []*racing.Race{
+				{AdvertisedStartTime: nil, Status: ""},
+			},
+		},
+		"Multiple races with differing times and missing times": {
+			Input: []*racing.Race{
+				{AdvertisedStartTime: futureTime},
+				{AdvertisedStartTime: pastTime},
+				{AdvertisedStartTime: nil},
+			},
+			ExpectedRaces: []*racing.Race{
+				{AdvertisedStartTime: futureTime, Status: "OPEN"},
+				{AdvertisedStartTime: pastTime, Status: "CLOSED"},
+				{AdvertisedStartTime: nil, Status: ""},
+			},
+		},
+	}
+
+	// Run tests
+	for name, cfg := range tests {
+		t.Run(
+			name,
+			func(cfg addStatusConfig) func(t *testing.T) {
+				return func(*testing.T) {
+					got := addStatus(cfg.Input)
+					assert.Equal(t, cfg.ExpectedRaces, got)
 				}
 			}(cfg))
 	}
