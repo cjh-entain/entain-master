@@ -68,6 +68,27 @@ curl -X "POST" "http://localhost:8000/v1/list-races" \
 }'
 ```
 
+### API Usage Guide
+Continuing from the above provided examples, a number additional, configurable components are now available for use. These include:
+- Filtering races by their visibility status
+- Ordering races by a user-provided field and direction (ASC/DESC)
+- A combination of the above
+
+#### Examples
+1. List all races that are visible _only_
+```bash
+curl -X "POST" "http://localhost:8000/v1/list-races" \
+     -H 'Content-Type: application/json' \
+     -d $'{ "filter": {"visible": true} }'
+```
+
+2. List all races that are visible, by their starting times in ascending order
+```bash
+curl -X "POST" "http://localhost:8000/v1/list-races" \
+     -H 'Content-Type: application/json' \
+     -d $'{ "filter": {"visible": true}, "order": {"field": "advertised_start_time", "direction": "ASC" } }'
+```
+
 ### Changes/Updates Required
 
 - We'd like to see you push this repository up to **GitHub/Gitlab/Bitbucket** and lodge a **Pull/Merge Request for each** of the below tasks.

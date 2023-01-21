@@ -1,11 +1,13 @@
 package db
 
 const (
-	racesList = "list"
+	racesColumnsList = "columnsList"
+	racesList        = "list"
 )
 
 func getRaceQueries() map[string]string {
 	return map[string]string{
+		racesColumnsList: `SELECT name FROM pragma_table_info('races')`,
 		racesList: `
 			SELECT 
 				id, 
