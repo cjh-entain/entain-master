@@ -1,0 +1,60 @@
+syntax = "proto3";
+package sports;
+
+option go_package = "/sports";
+
+import "google/protobuf/timestamp.proto";
+
+service Sports {
+  // ListEvents will return a collection of all sports events.
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {}
+}
+
+/* Requests/Responses */
+
+message ListEventsRequest {
+  ListEventsRequestFilter filter = 1;
+  ListEventsRequestOrder order = 2;
+}
+
+// Response to ListEvents call.
+message ListEventsResponse {
+  repeated Event events = 1;
+}
+
+// Filter for listing events.
+message ListEventsRequestFilter {
+  optional string home_team = 1;
+  optional string away_team = 2;
+  optional string venue_location = 3;
+  optional bool visible = 4;
+}
+
+// Allows for a ListEvents query to be ordered by a user-provided column and direction
+message ListEventsRequestOrder {
+  string field = 1;
+  optional string direction = 2;
+}
+
+/* Resources */
+
+// An event resource.
+message Event {
+  // ID represents a unique identifier for the event.
+  int64 id = 1;
+  // Name represents the combination of awayTeam vs homeTeam
+  string name = 2;
+  // HomeTeam represents the name of the team playing at their home venue.
+  string home_team = 3;
+  // AwayTeam represents the name of the team not playing at their home venue.
+  string away_team = 4;
+  // VenueLocation is the state in which the venue for the event is located.
+  string venue_location = 5;
+  // Visible represents whether or not the event is visible.
+  bool visible = 6;
+  // AdvertisedStartTime is the time the event is advertised to start.
+  google.protobuf.Timestamp advertised_start_time = 7;
+  // Status represents whether AdvertisedStartTime is in the past or future.
+  string status = 8;
+}
+

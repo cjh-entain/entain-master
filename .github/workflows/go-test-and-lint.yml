@@ -23,6 +23,11 @@ jobs:
         with:
           version: latest
           working-directory: racing
+      - name: Linting Sports
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          working-directory: sports
   test:
     name: Run Test
     runs-on: ubuntu-latest
