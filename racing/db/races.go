@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"strconv"
 	"strings"
@@ -13,6 +14,10 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+var (
+	ErrCantFindID = errors.New("unable to locate a race with the provided ID")
+)
+
 // RacesRepo provides repository access to races.
 type RacesRepo interface {
 	// Init will initialise our races repository.
@@ -20,6 +25,9 @@ type RacesRepo interface {
 
 	// List will return a list of races.
 	List(filter *racing.ListRacesRequestFilter, order *racing.ListRacesRequestOrder) ([]*racing.Race, error)
+
+	// GetByID will return a single race based upon a provided id
+	GetByID(id int64) (*racing.Race, error)
 }
 
 type racesRepo struct {
@@ -63,6 +71,37 @@ func (r *racesRepo) List(filter *racing.ListRacesRequestFilter, order *racing.Li
 	}
 
 	return r.scanRaces(rows)
+}
+
+// GetByID Returns a singular race event, based upon the provided ID in the request
+func (r *racesRepo) GetByID(id int64) (*racing.Race, error) {
+	var (
+		err   error
+		query string
+		args  []interface{}
+	)
+
+	query = getRaceQueries()[racesList]
+
+	filter := &racing.ListRacesRequestFilter{Id: &id}
+
+	query, args = r.applyFilter(query, filter)
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := r.scanRaces(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res) == 0 {
+		return nil, ErrCantFindID
+	}
+
+	return res[0], nil
 }
 
 // Allows for a ListRaces RPC to be ordered by a user-provided field, in a user-provided direction. Validates the user
@@ -133,6 +172,11 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 
 	if filter.Visible != nil {
 		clauses = append(clauses, "visible = "+strconv.FormatBool(filter.GetVisible()))
+	}
+
+	if filter.Id != nil {
+		clauses = append(clauses, "id = ?")
+		args = append(args, filter.GetId())
 	}
 
 	if len(clauses) != 0 {
