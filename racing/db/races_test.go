@@ -109,44 +109,65 @@ func Test_RacesRepo_applyOrder(t *testing.T) {
 			Order:         nil,
 			ExpectedQuery: "",
 		},
+		"Order with no field and no direction": {
+			Order: &racing.ListRacesRequestOrder{
+				Field:     nil,
+				Direction: nil,
+			},
+			ExpectedQuery: " ORDER BY advertised_start_time",
+		},
+		"Order with no field but direction included": {
+			Order: &racing.ListRacesRequestOrder{
+				Field:     nil,
+				Direction: pointerTo("ASC"),
+			},
+			ExpectedQuery: " ORDER BY advertised_start_time ASC",
+		},
+		"Order with no field and invalid direction": {
+			Order: &racing.ListRacesRequestOrder{
+				Field:     nil,
+				Direction: pointerTo("INVALID"),
+			},
+			ExpectedQuery: " ORDER BY advertised_start_time",
+		},
 		"Order provided for invalid field, no direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "unknown",
+				Field:     pointerTo("unknown"),
 				Direction: nil,
 			},
 			ExpectedQuery: "",
 		},
 		"Order provided for invalid field with direction resulting in no changes": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "unknown",
+				Field:     pointerTo("unknown"),
 				Direction: pointerTo("ASC"),
 			},
 			ExpectedQuery: "",
 		},
 		"Order provided for valid field, no direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "meeting_id",
+				Field:     pointerTo("meeting_id"),
 				Direction: nil,
 			},
 			ExpectedQuery: " ORDER BY meeting_id",
 		},
 		"Order provided for valid field, ASC direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "meeting_id",
+				Field:     pointerTo("meeting_id"),
 				Direction: pointerTo("ASC"),
 			},
 			ExpectedQuery: " ORDER BY meeting_id ASC",
 		},
 		"Order provided for valid field, DESC direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "meeting_id",
+				Field:     pointerTo("meeting_id"),
 				Direction: pointerTo("DESC"),
 			},
 			ExpectedQuery: " ORDER BY meeting_id DESC",
 		},
 		"Order provided for valid field, invalid direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "meeting_id",
+				Field:     pointerTo("meeting_id"),
 				Direction: pointerTo("INCORRECT"),
 			},
 			ExpectedQuery: " ORDER BY meeting_id",
