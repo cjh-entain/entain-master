@@ -1,0 +1,50 @@
+version: "3.9"
+services:
+
+  # Exposed API
+  api:
+    container_name: api
+    build: ./api
+    image: entain/api
+    environment:
+      API_ENDPOINT: ${API_ENDPOINT}
+      RACING_ENDPOINT: ${RACING_ENDPOINT}
+      SPORTS_ENDPOINT: ${SPORTS_ENDPOINT}
+    networks:
+      back:
+        aliases:
+          - entain-api
+    ports:
+      - 8000:${API_PORT}
+
+  # Backend Racing gRPC service
+  racing:
+    container_name: racing
+    build: ./racing
+    image: entain/racing
+    environment:
+      RACING_ENDPOINT: ${RACING_ENDPOINT}
+    networks:
+      back:
+        aliases:
+          - entain-racing
+
+  # Backend Sports gRPC service
+  sports:
+    container_name: sports
+    build: ./sports
+    image: entain/sports
+    environment:
+      SPORTS_ENDPOINT: ${SPORTS_ENDPOINT}
+    networks:
+      back:
+        aliases:
+          - entain-sports
+
+networks:
+  back:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.15.0.0/24
+          gateway: 172.15.0.1

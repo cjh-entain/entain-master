@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"strings"
 	"testing"
 	"time"
 
@@ -21,39 +20,41 @@ type applyFilterConfig struct {
 	ExpectedArgs  []interface{}
 }
 
-// Validates .applyFilter by comparing query strings
+// Validates .applyFilter by comparing query strings. As the modification occurs at the end of the query string, these
+// unit tests are validating only the end of the query. This avoids an additional unnecessary dependency on
+// getQueryStrings().
 func Test_RacesRepo_applyFilter(t *testing.T) {
 
 	tests := map[string]applyFilterConfig{
 		"Base Case - No filters": {
 			Filter:        &racing.ListRacesRequestFilter{},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races",
+			ExpectedQuery: "",
 		},
 		"Filter on single MeetingId": {
 			Filter: &racing.ListRacesRequestFilter{
 				MeetingIds: []int64{1},
 			},
 			ExpectedArgs:  []interface{}{int64(1)},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE meeting_id IN (?)",
+			ExpectedQuery: " WHERE meeting_id IN (?)",
 		},
 		"Filter on multiple MeetingId's": {
 			Filter: &racing.ListRacesRequestFilter{
 				MeetingIds: []int64{1, 2},
 			},
 			ExpectedArgs:  []interface{}{int64(1), int64(2)},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE meeting_id IN (?,?)",
+			ExpectedQuery: " WHERE meeting_id IN (?,?)",
 		},
 		"Filter on Visible = true": {
 			Filter: &racing.ListRacesRequestFilter{
 				Visible: pointerTo(true),
 			},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE visible = true",
+			ExpectedQuery: " WHERE visible = true",
 		},
 		"Filter on Visible = false": {
 			Filter: &racing.ListRacesRequestFilter{
 				Visible: pointerTo(false),
 			},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE visible = false",
+			ExpectedQuery: " WHERE visible = false",
 		},
 		"Filter on both MeetingId's and Visible": {
 			Filter: &racing.ListRacesRequestFilter{
@@ -61,14 +62,14 @@ func Test_RacesRepo_applyFilter(t *testing.T) {
 				Visible:    pointerTo(true),
 			},
 			ExpectedArgs:  []interface{}{int64(1), int64(2)},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE meeting_id IN (?,?) AND visible = true",
+			ExpectedQuery: " WHERE meeting_id IN (?,?) AND visible = true",
 		},
 		"Filter on a Race ID": {
 			Filter: &racing.ListRacesRequestFilter{
 				Id: pointerTo(int64(5)),
 			},
 			ExpectedArgs:  []interface{}{int64(5)},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races WHERE id = ?",
+			ExpectedQuery: " WHERE id = ?",
 		},
 	}
 
@@ -79,18 +80,13 @@ func Test_RacesRepo_applyFilter(t *testing.T) {
 		db: racesDB,
 	}
 
-	// Used to remove any extraneous whitespace from the resulting query
-	replacer := strings.NewReplacer("\n", "", "\t", "")
-
 	// Run tests
 	for name, cfg := range tests {
 		t.Run(
 			name,
 			func(cfg applyFilterConfig) func(t *testing.T) {
 				return func(*testing.T) {
-					query := getRaceQueries()[racesList]
-					gotQueryTmp, gotArgs := racesRepo.applyFilter(query, cfg.Filter)
-					gotQuery := replacer.Replace(gotQueryTmp)
+					gotQuery, gotArgs := racesRepo.applyFilter("", cfg.Filter)
 
 					assert.Equal(t, cfg.ExpectedArgs, gotArgs)
 					assert.Equal(t, cfg.ExpectedQuery, gotQuery)
@@ -104,55 +100,77 @@ type applyOrderConfig struct {
 	ExpectedQuery string
 }
 
-// Validates .applyOrder by comparing query strings
+// Validates .applyOrder by comparing query strings. As with .applyFilter, these unit tests are validating only the end
+// of the query string and any associated arguments.
 func Test_RacesRepo_applyOrder(t *testing.T) {
 
 	tests := map[string]applyOrderConfig{
 		"Base case - No order provided": {
 			Order:         nil,
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races",
+			ExpectedQuery: "",
+		},
+		"Order with no field and no direction": {
+			Order: &racing.ListRacesRequestOrder{
+				Field:     nil,
+				Direction: nil,
+			},
+			ExpectedQuery: " ORDER BY advertised_start_time",
+		},
+		"Order with no field but direction included": {
+			Order: &racing.ListRacesRequestOrder{
+				Field:     nil,
+				Direction: pointerTo("ASC"),
+			},
+			ExpectedQuery: " ORDER BY advertised_start_time ASC",
+		},
+		"Order with no field and invalid direction": {
+			Order: &racing.ListRacesRequestOrder{
+				Field:     nil,
+				Direction: pointerTo("INVALID"),
+			},
+			ExpectedQuery: " ORDER BY advertised_start_time",
 		},
 		"Order provided for invalid field, no direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "unknown",
+				Field:     pointerTo("unknown"),
 				Direction: nil,
 			},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races",
+			ExpectedQuery: "",
 		},
 		"Order provided for invalid field with direction resulting in no changes": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "unknown",
+				Field:     pointerTo("unknown"),
 				Direction: pointerTo("ASC"),
 			},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races",
+			ExpectedQuery: "",
 		},
 		"Order provided for valid field, no direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "meeting_id",
+				Field:     pointerTo("meeting_id"),
 				Direction: nil,
 			},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id",
+			ExpectedQuery: " ORDER BY meeting_id",
 		},
 		"Order provided for valid field, ASC direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "meeting_id",
+				Field:     pointerTo("meeting_id"),
 				Direction: pointerTo("ASC"),
 			},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id ASC",
+			ExpectedQuery: " ORDER BY meeting_id ASC",
 		},
 		"Order provided for valid field, DESC direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "meeting_id",
+				Field:     pointerTo("meeting_id"),
 				Direction: pointerTo("DESC"),
 			},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id DESC",
+			ExpectedQuery: " ORDER BY meeting_id DESC",
 		},
 		"Order provided for valid field, invalid direction": {
 			Order: &racing.ListRacesRequestOrder{
-				Field:     "meeting_id",
+				Field:     pointerTo("meeting_id"),
 				Direction: pointerTo("INCORRECT"),
 			},
-			ExpectedQuery: "SELECT id, meeting_id, name, number, visible, advertised_start_time FROM races ORDER BY meeting_id",
+			ExpectedQuery: " ORDER BY meeting_id",
 		},
 	}
 
@@ -163,19 +181,13 @@ func Test_RacesRepo_applyOrder(t *testing.T) {
 		db: racesDB,
 	}
 
-	// Used to remove any extraneous whitespace from the resulting query
-	replacer := strings.NewReplacer("\n", "", "\t", "")
-
 	// Run tests
 	for name, cfg := range tests {
 		t.Run(
 			name,
 			func(cfg applyOrderConfig) func(t *testing.T) {
 				return func(*testing.T) {
-					query := getRaceQueries()[racesList]
-					gotQueryTmp := racesRepo.applyOrder(query, cfg.Order)
-					gotQuery := replacer.Replace(gotQueryTmp)
-
+					gotQuery := racesRepo.applyOrder("", cfg.Order)
 					assert.Equal(t, cfg.ExpectedQuery, gotQuery)
 				}
 			}(cfg))
@@ -188,7 +200,7 @@ type addStatusConfig struct {
 }
 
 // Validates the calculation of the status field based upon a races timestamp
-func Test_addStatus(t *testing.T) {
+func Test_RacesRepo_addStatus(t *testing.T) {
 
 	var (
 		futureTime = timestamppb.New(time.Now().Add(time.Hour * 24))
@@ -268,13 +280,20 @@ func Test_addStatus(t *testing.T) {
 		},
 	}
 
+	// Create DB & RacesRepo struct
+	racesDB := memoryDB(t)
+	defer racesDB.Close()
+	racesRepo := &racesRepo{
+		db: racesDB,
+	}
+
 	// Run tests
 	for name, cfg := range tests {
 		t.Run(
 			name,
 			func(cfg addStatusConfig) func(t *testing.T) {
 				return func(*testing.T) {
-					got := addStatus(cfg.Input)
+					got := racesRepo.addStatus(cfg.Input)
 					assert.Equal(t, cfg.ExpectedRaces, got)
 				}
 			}(cfg))

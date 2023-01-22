@@ -107,12 +107,30 @@ func (r *racesRepo) GetByID(id int64) (*racing.Race, error) {
 // Allows for a ListRaces RPC to be ordered by a user-provided field, in a user-provided direction. Validates the user
 // provided field against columns returned by the DB.
 func (r *racesRepo) applyOrder(query string, order *racing.ListRacesRequestOrder) string {
+
+	// Determines the direction for the order by
+	var parseDirection = func(dir string) string {
+		dir = strings.ToUpper(dir)
+		switch dir {
+		case "ASC":
+			return " ASC"
+		case "DESC":
+			return " DESC"
+		}
+		return ""
+	}
+
 	// Return immediately if not in request
 	if order == nil {
 		return query
 	}
 
-	// Determine a list of columns upon which you can order by; the validity of which should be determined by the DB
+	// Default order by if no field has been provided
+	if order.Field == nil {
+		query += " ORDER BY advertised_start_time" + parseDirection(order.GetDirection())
+	}
+
+	// As a field has been specified by the user, we need to determine if it's a valid and allowable choice
 	validColumns := make(map[string]bool)
 	columnQuery := getRaceQueries()[racesColumnsList]
 	rows, err := r.db.Query(columnQuery)
@@ -140,13 +158,7 @@ func (r *racesRepo) applyOrder(query string, order *racing.ListRacesRequestOrder
 
 	// Append user selected direction if it's valid and provided
 	if order.Direction != nil {
-		direction := strings.ToUpper(order.GetDirection())
-		switch direction {
-		case "ASC":
-			query += " ASC"
-		case "DESC":
-			query += " DESC"
-		}
+		query += parseDirection(order.GetDirection())
 	}
 
 	return query
@@ -186,6 +198,27 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 	return query, args
 }
 
+// Iterates through a set of provided races and calculates the value for the `status` field based upon whether a races
+// advertisedStartTime has passed or not.
+func (r *racesRepo) addStatus(races []*racing.Race) []*racing.Race {
+	for _, race := range races {
+
+		// If an AdvertisedStartTime isn't set, avoid determining the status
+		if race.AdvertisedStartTime == nil {
+			continue
+		}
+
+		// If the start time is in the future it's "OPEN", otherwise "CLOSED"
+		if race.AdvertisedStartTime.AsTime().After(time.Now()) {
+			race.Status = "OPEN"
+		} else {
+			race.Status = "CLOSED"
+		}
+	}
+
+	return races
+}
+
 func (m *racesRepo) scanRaces(
 	rows *sql.Rows,
 ) ([]*racing.Race, error) {
@@ -210,28 +243,7 @@ func (m *racesRepo) scanRaces(
 		races = append(races, &race)
 	}
 
-	races = addStatus(races)
+	races = m.addStatus(races)
 
 	return races, nil
-}
-
-// Iterates through a set of provided races and calculates the value for the `status` field based upon whether a races
-// advertisedStartTime has passed or not.
-func addStatus(races []*racing.Race) []*racing.Race {
-	for _, race := range races {
-
-		// If an AdvertisedStartTime isn't set, avoid determining the status
-		if race.AdvertisedStartTime == nil {
-			continue
-		}
-
-		// If the start time is in the future it's "OPEN", otherwise "CLOSED"
-		if race.AdvertisedStartTime.AsTime().After(time.Now()) {
-			race.Status = "OPEN"
-		} else {
-			race.Status = "CLOSED"
-		}
-	}
-
-	return races
 }
