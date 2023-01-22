@@ -198,6 +198,27 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 	return query, args
 }
 
+// Iterates through a set of provided races and calculates the value for the `status` field based upon whether a races
+// advertisedStartTime has passed or not.
+func (r *racesRepo) addStatus(races []*racing.Race) []*racing.Race {
+	for _, race := range races {
+
+		// If an AdvertisedStartTime isn't set, avoid determining the status
+		if race.AdvertisedStartTime == nil {
+			continue
+		}
+
+		// If the start time is in the future it's "OPEN", otherwise "CLOSED"
+		if race.AdvertisedStartTime.AsTime().After(time.Now()) {
+			race.Status = "OPEN"
+		} else {
+			race.Status = "CLOSED"
+		}
+	}
+
+	return races
+}
+
 func (m *racesRepo) scanRaces(
 	rows *sql.Rows,
 ) ([]*racing.Race, error) {
@@ -222,28 +243,7 @@ func (m *racesRepo) scanRaces(
 		races = append(races, &race)
 	}
 
-	races = addStatus(races)
+	races = m.addStatus(races)
 
 	return races, nil
-}
-
-// Iterates through a set of provided races and calculates the value for the `status` field based upon whether a races
-// advertisedStartTime has passed or not.
-func addStatus(races []*racing.Race) []*racing.Race {
-	for _, race := range races {
-
-		// If an AdvertisedStartTime isn't set, avoid determining the status
-		if race.AdvertisedStartTime == nil {
-			continue
-		}
-
-		// If the start time is in the future it's "OPEN", otherwise "CLOSED"
-		if race.AdvertisedStartTime.AsTime().After(time.Now()) {
-			race.Status = "OPEN"
-		} else {
-			race.Status = "CLOSED"
-		}
-	}
-
-	return races
 }

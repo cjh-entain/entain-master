@@ -150,6 +150,26 @@ func (s *sportsRepo) applyFilter(query string, filter *sports.ListEventsRequestF
 	return query, args
 }
 
+// Iterates through a set of provided events and calculates derived fields (name and status)
+func (s *sportsRepo) addDerivedFields(events []*sports.Event) []*sports.Event {
+	for _, event := range events {
+
+		// Generate the event name from the awayTeam and homeTeam names
+		event.Name = fmt.Sprintf("%s vs %s", event.GetAwayTeam(), event.GetHomeTeam())
+
+		// If the start time is in the future it's "OPEN", otherwise "CLOSED"
+		if event.AdvertisedStartTime != nil {
+			if event.AdvertisedStartTime.AsTime().After(time.Now()) {
+				event.Status = "OPEN"
+			} else {
+				event.Status = "CLOSED"
+			}
+		}
+	}
+
+	return events
+}
+
 func (m *sportsRepo) scanEvents(
 	rows *sql.Rows,
 ) ([]*sports.Event, error) {
@@ -174,27 +194,7 @@ func (m *sportsRepo) scanEvents(
 		events = append(events, &event)
 	}
 
-	events = addDerivedFields(events)
+	events = m.addDerivedFields(events)
 
 	return events, nil
-}
-
-// Iterates through a set of provided events and calculates derived fields (name and status)
-func addDerivedFields(events []*sports.Event) []*sports.Event {
-	for _, event := range events {
-
-		// Generate the event name from the awayTeam and homeTeam names
-		event.Name = fmt.Sprintf("%s vs %s", event.GetAwayTeam(), event.GetHomeTeam())
-
-		// If the start time is in the future it's "OPEN", otherwise "CLOSED"
-		if event.AdvertisedStartTime != nil {
-			if event.AdvertisedStartTime.AsTime().After(time.Now()) {
-				event.Status = "OPEN"
-			} else {
-				event.Status = "CLOSED"
-			}
-		}
-	}
-
-	return events
 }

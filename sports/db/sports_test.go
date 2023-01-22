@@ -178,7 +178,7 @@ type addStatusConfig struct {
 }
 
 // Validates the calculation of derived fields (name and status)
-func Test_addStatus(t *testing.T) {
+func Test_SportsRepo_addDerivedFields(t *testing.T) {
 
 	const (
 		homeTeam  = "home"
@@ -395,13 +395,20 @@ func Test_addStatus(t *testing.T) {
 		},
 	}
 
+	// Create DB & SportsRepo struct
+	sportsDB := memoryDB(t)
+	defer sportsDB.Close()
+	sportsRepo := &sportsRepo{
+		db: sportsDB,
+	}
+
 	// Run tests
 	for name, cfg := range tests {
 		t.Run(
 			name,
 			func(cfg addStatusConfig) func(t *testing.T) {
 				return func(*testing.T) {
-					got := addDerivedFields(cfg.Input)
+					got := sportsRepo.addDerivedFields(cfg.Input)
 					assert.Equal(t, cfg.ExpectedSports, got)
 				}
 			}(cfg))

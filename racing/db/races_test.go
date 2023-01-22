@@ -200,7 +200,7 @@ type addStatusConfig struct {
 }
 
 // Validates the calculation of the status field based upon a races timestamp
-func Test_addStatus(t *testing.T) {
+func Test_RacesRepo_addStatus(t *testing.T) {
 
 	var (
 		futureTime = timestamppb.New(time.Now().Add(time.Hour * 24))
@@ -280,13 +280,20 @@ func Test_addStatus(t *testing.T) {
 		},
 	}
 
+	// Create DB & RacesRepo struct
+	racesDB := memoryDB(t)
+	defer racesDB.Close()
+	racesRepo := &racesRepo{
+		db: racesDB,
+	}
+
 	// Run tests
 	for name, cfg := range tests {
 		t.Run(
 			name,
 			func(cfg addStatusConfig) func(t *testing.T) {
 				return func(*testing.T) {
-					got := addStatus(cfg.Input)
+					got := racesRepo.addStatus(cfg.Input)
 					assert.Equal(t, cfg.ExpectedRaces, got)
 				}
 			}(cfg))
