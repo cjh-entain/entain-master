@@ -113,6 +113,27 @@ curl -X "POST" "http://localhost:8000/v1/list-events" \
      -d $'{ "filter": {"visible": true}, "order": {"field": "advertised_start_time", "direction": "DESC" } }'
 ```
 
+### Docker usage guide
+_This assumes that you have docker binaries installed; if this is not the case visit https://docs.docker.com/get-docker/_
+
+Each service (API, Racing, and Sports) has been updated with a `Dockerfile` so they may be built out into Docker images. Further, 
+there's a `docker-compose.yml` file to facilitate launching these containerised versions into a networked and testable environment.
+Several environment variables relevant to Docker are contained within `.env` and are configurable to your requirements.
+
+To stand up the services:
+```bash
+docker compose up -d
+```
+
+Once stood up (assuming default values), you can then query the API as per usual:
+```bash
+curl -X "POST" "http://localhost:8000/v1/list-events" \
+     -H 'Content-Type: application/json'
+```
+
+To stop and/or remove the containers, run the relevant docker commands
+e.g. `docker compose down` or `docker compose stop`
+
 ### Changes/Updates Required
 
 - We'd like to see you push this repository up to **GitHub/Gitlab/Bitbucket** and lodge a **Pull/Merge Request for each** of the below tasks.
